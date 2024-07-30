@@ -1,0 +1,15 @@
+function amsi-loader {
+    param (
+        [string[]]$files
+    )
+
+    foreach ($filePath in $files) {
+        if (-Not (Test-Path $filePath)) {
+            throw "El archivo $filePath no existe."
+        }
+
+        $content = Get-Content -Path $filePath -Raw
+
+        Invoke-Expression $content
+    }
+}
