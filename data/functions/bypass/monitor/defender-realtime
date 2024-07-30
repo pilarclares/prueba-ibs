@@ -1,0 +1,35 @@
+function defender-realtime {
+    param (
+        [switch]$enable,
+        [switch]$disable
+    )
+    function check-action {
+     param(
+            [Parameter(Mandatory)]
+            [string] $option
+        )
+        $outp = Get-MpPreference | fl DisableRealtimeMonitoring | out-string
+        if ($outp.Contains($option)) {
+            return "Done"
+        } else {
+            return "It has not been possible to carry out the action"
+        }
+    }
+
+    if (isadmin){
+        Set-MpComputerStatus -TamperProtection 4
+        Set-MpComputerStatus -TamperProtectionSource 2
+
+        if ($enable.IsPresent) {
+            Set-MpPreference -DisableRealtimeMonitoring $false
+            check-action -option "False"
+        } elseif ($disable.IsPresent) {
+            Set-MpPreference -DisableRealtimeMonitoring $true
+            check-action -option "True" 
+        } else {
+            return "You must specify a parameter to perform the action (-enable or -disable)"
+        }
+    }else {
+        return "You need admin privileges"
+    }
+}

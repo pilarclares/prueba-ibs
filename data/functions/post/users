@@ -1,0 +1,82 @@
+function users{
+  <#
+    .SYNOPSIS 
+     This feature can be used to list users or groups, to add or delete a local user and to add an user to a group. 
+    .INPUTS
+     option: It could be list_users, list_groups, add_user, delete_user or add_user_to_group
+    .EXAMPLE
+     users -option list_users
+		 To list users
+		.EXAMPLE
+		 users -option add_user -user UserName
+		 To add a new local user
+		.EXAMPLE
+		 users -option add_user_to_group -user UnserName -group GroupName
+		 To add an user to a group
+  #>
+
+param(
+    [Parameter(Mandatory=$true)]
+    [String] $option,
+    [Parameter(Mandatory=$false)]
+    [String] $user,
+	  [Parameter(Mandatory=$false)]
+    [String] $group
+  )
+
+	function get-users {
+
+	$aux = ""
+	$comp = [ADSI]"WinNT://$env:COMPUTERNAME"
+
+	$comp.psbase.children | where { $_.psbase.schemaClassName -eq 'group' } | foreach {
+		$aux = $aux + $_.name + "`r`n"
+		$aux = $aux + "---------------`r`n"
+		$group =[ADSI]$_.psbase.Path
+		$group.psbase.Invoke("Members") | foreach {$aux = $aux + $_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null) + "`r`n"}
+		$aux = $aux + "`r`n"
+		
+	}
+
+   return $aux
+
+}
+
+	if ($option -eq "list_users") {
+		return get-users	
+	} elseif ($option -eq "add_user"){
+		if(-not (isadmin)) {
+				return "There aren't enough privileges"
+			}
+			if ($user) {
+				net user $user /add	
+			} else {
+				printMessage -message "You have not written the user"
+			}
+	} elseif ($option -eq "list_groups"){
+			net localgroup
+	}elseif ($option -eq "add_user_to_group"){
+			if(-not (isadmin)) {
+				return "There aren't enough privileges"
+			}
+			if ($group -and $user){
+			 	net localgroup $group $user /add
+			}else {
+				printMessage -message "You have not written correct data... (user and group)"
+			}
+	} elseif ($option -eq "delete_user") {
+			if(-not (isadmin)) {
+				return "There aren't enough privileges"
+			}
+			if ($user) {
+				net user $user /delete
+			} else {
+				printMessage -message "You have not written the user"
+			}
+	} else {
+			printMessage -message "Wrong option"
+	}
+	
+}
+
+
