@@ -1,4 +1,4 @@
-function amsi-loader {
+function loader {
     param (
         [Parameter(Mandatory=$true)]
         [string[]]$files
