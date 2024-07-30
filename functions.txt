@@ -23,7 +23,7 @@ bypass/uac/invoke-wsreset
 bypass/amsi/amsi-memory
 bypass/amsi/amsi-dlldisk
 bypass/amsi/amsi-scanbuffer
-bypass/amsi/amsi-loader
+bypass/amsi/loader
 bypass/monitor/defender-realtime
 persistence/invoke-ridhijacking
 post/extract-sshprivatekey
