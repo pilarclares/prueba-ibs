@@ -13,7 +13,4 @@ function amsi-loader {
 
         Invoke-Expression $content
     }
-
-    Invoke-Expression "amsiutils"
-
 }
