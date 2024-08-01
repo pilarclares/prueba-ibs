@@ -1,8 +1,6 @@
 function loader {
     param (
-        [Parameter(Mandatory=$false)]
         [string]$directory,
-        [Parameter(Mandatory=$false)]
         [string[]]$files
     )
 
