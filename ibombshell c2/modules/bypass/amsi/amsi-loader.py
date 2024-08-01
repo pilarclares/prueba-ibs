@@ -70,9 +70,10 @@ class CustomModule(Module):
         function += 'loader'
 
         if self.args["directory"]:
-            function += ' -directory {}'.format(self.args["directory"])
+            function += f' -directory {self.args["directory"]}'
         elif self.args["files"]:
-            files_list = ','.join(f"'{file}'" for file in self.args["files"])
-            function += f" -files @({files_list})"
+            file_paths = [path.strip() for path in self.args["files"].split(',')]
+            files_parameter = ', '.join(f"'{path}'" for path in file_paths)
+            function += f' -files @({files_parameter})'
 
         super(CustomModule, self).run(function)
