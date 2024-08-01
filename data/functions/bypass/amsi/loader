@@ -1,12 +1,28 @@
 function loader {
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
+        [string]$directory,
+        [Parameter(Mandatory=$false)]
         [string[]]$files
     )
 
+    if (-not $directory -and -not $files) {
+        Write-Host "At least one of the parameters `$directory or `$files must be provided."
+        return
+    }
+
+    if ($directory) {
+        if (-Not (Test-Path $directory)) {
+            Write-Host "The directory $directory does not exist."
+            return
+        }
+
+        $files = Get-ChildItem -Path $directory -Recurse -File | Select-Object -ExpandProperty FullName
+    }
+
     foreach ($filePath in $files) {
         if (-Not (Test-Path $filePath)) {
-            Write-Error "El archivo $filePath no existe."
+            Write-Host "The file $filePath does not exist."
             return
         }
 
@@ -14,7 +30,7 @@ function loader {
             $content = Get-Content -Path $filePath -Raw
             Invoke-Expression $content -ErrorAction Stop | Out-Null
         } catch {
-            Write-Host "Error al ejecutar los comandos del archivo $filePath."
+            Write-Host "Error executing commands from the file $filePath."
             throw $_.Exception
         }
     }
