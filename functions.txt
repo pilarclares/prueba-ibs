@@ -20,10 +20,10 @@ bypass/uac/invoke-fodhelper
 bypass/uac/invoke-sdclt
 bypass/uac/invoke-wusa
 bypass/uac/invoke-wsreset
-bypass/amsi/amsi-memory
+bypass/amsi/amsi-memory2
+bypass/amsi/loader
 bypass/amsi/amsi-dlldisk
 bypass/amsi/amsi-scanbuffer
-bypass/amsi/loader
 bypass/monitor/defender-realtime
 persistence/invoke-ridhijacking
 post/extract-sshprivatekey
