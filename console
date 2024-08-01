@@ -114,7 +114,7 @@ function console{
     #Important: URL download ibombshell
     $gtRawBase = "https://raw.githubusercontent.com/pilarclares/prueba/main/"
     $gtRawFunctions = "data/functions/"
-    $functionsList = "https://raw.githubusercontent.com/pilarclares/prueba/main/functions.txt"
+    $functionsList = "https://raw.githubusercontent.com/Telefonica/ibombshell/master/functions.txt"
 
     [System.Collections.ArrayList]$functionsLoaded = "showcommands", "showfunctions", "quit"
     [System.Collections.ArrayList]$internalFunctions = "detect-OS", "printprompt", "printData", "isadmin", "commandsearch", "printMessage", "addcommand"
@@ -217,7 +217,7 @@ results={"os_version":"$os_version", "os_arch":"$os_arch", "admin":"$admin"}
 
     $try_connection = 0
     
-    while($global:condition)
+    while($condition)
     {
 
         if($Silently)
@@ -306,7 +306,7 @@ results=$results
                 } catch {
                     printMessage -message "Something went wrong loading the module"
                     printMessage -message "$_.Exception.Message"
-                    $global:functionsLoaded.removeat($result)
+                    $functionsLoaded.removeat($result)
                 }
             }
             else
