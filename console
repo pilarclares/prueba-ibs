@@ -112,9 +112,9 @@ function console{
 
     
     #Important: URL download ibombshell
-    $gtRawBase = "https://raw.githubusercontent.com/pilarclares/prueba/main/"
+    $gtRawBase = "https://raw.githubusercontent.com/pilarclares/prueba-ibs/main/"
     $gtRawFunctions = "data/functions/"
-    $functionsList = "https://raw.githubusercontent.com/Telefonica/ibombshell/master/functions.txt"
+    $functionsList = "https://raw.githubusercontent.com/pilarclares/prueba-ibs/main/functions.txt"
 
     [System.Collections.ArrayList]$functionsLoaded = "showcommands", "showfunctions", "quit"
     [System.Collections.ArrayList]$internalFunctions = "detect-OS", "printprompt", "printData", "isadmin", "commandsearch", "printMessage", "addcommand"
