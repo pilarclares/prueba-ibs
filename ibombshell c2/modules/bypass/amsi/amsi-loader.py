@@ -78,12 +78,12 @@ class CustomModule(Module):
         }
 
         options = {
-            "ip": [None, "Local IP (Where the file is located)", True],
-            "port": ["8082", "Server port", True],
-            "destination": ["$env:TMP\\amlo", "Directory with the files", True],
+            "ip": [None, "IP address of the server to connect to", True],
+            "port": ["8082", "Port where the server is listening", True],
+            "destination": ["$env:TMP\\amlo", "Directory containing the files", True],
             "filePath": [None, "Path to the bypass file", True],
             "lineNumbers": [None, "Path to the file containing line numbers for blocks", True],
-            "instruction": [None, "Instruction to execute after bypass AMSI", False]
+            "instruction": [None, "Instruction to execute after bypassing AMSI", False]
         }
 
         super(CustomModule, self).__init__(information, options)
